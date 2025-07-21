@@ -8,10 +8,12 @@ import Animated, {
   withTiming,
   withSequence,
 } from 'react-native-reanimated';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
 export default function FunkyBackground() {
+  const { colors } = useTheme();
   const rotation = useSharedValue(0);
   const scale = useSharedValue(1);
 
@@ -46,21 +48,21 @@ export default function FunkyBackground() {
       {/* Animated Background Shapes */}
       <Animated.View style={[styles.shape1, animatedStyle]}>
         <LinearGradient
-          colors={['#FF0000', '#FF6B6B', '#FF9999']}
+          colors={colors.gradient1}
           style={styles.gradient}
         />
       </Animated.View>
       
       <Animated.View style={[styles.shape2, animatedStyle]}>
         <LinearGradient
-          colors={['#4F46E5', '#7C3AED', '#A855F7']}
+          colors={colors.gradient2}
           style={styles.gradient}
         />
       </Animated.View>
       
       <Animated.View style={[styles.shape3, animatedStyle]}>
         <LinearGradient
-          colors={['#059669', '#10B981', '#34D399']}
+          colors={colors.gradient3}
           style={styles.gradient}
         />
       </Animated.View>

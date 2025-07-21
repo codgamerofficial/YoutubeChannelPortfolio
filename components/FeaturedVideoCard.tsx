@@ -14,6 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Play } from 'lucide-react-native';
 import VideoPlayer from './VideoPlayer';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface FeaturedVideoCardProps {
   video: {
@@ -28,6 +29,7 @@ interface FeaturedVideoCardProps {
 }
 
 export default function FeaturedVideoCard({ video, index }: FeaturedVideoCardProps) {
+  const { colors } = useTheme();
   const translateY = useSharedValue(50);
   const [showPlayer, setShowPlayer] = React.useState(false);
 
@@ -48,7 +50,7 @@ export default function FeaturedVideoCard({ video, index }: FeaturedVideoCardPro
   };
   return (
     <>
-      <Animated.View style={[styles.videoCard, animatedStyle]}>
+      <Animated.View style={[styles.videoCard, animatedStyle, { backgroundColor: colors.card }]}>
         <TouchableOpacity onPress={handlePlayVideo}>
         <View style={styles.thumbnailContainer}>
           <Image source={{ uri: video.thumbnail }} style={styles.thumbnail} />
@@ -61,12 +63,12 @@ export default function FeaturedVideoCard({ video, index }: FeaturedVideoCardPro
         </View>
         
         <View style={styles.videoInfo}>
-          <Text style={styles.videoTitle} numberOfLines={2}>
+          <Text style={[styles.videoTitle, { color: colors.text }]} numberOfLines={2}>
             {video.title}
           </Text>
           <View style={styles.videoMeta}>
-            <Text style={styles.views}>{video.views} views</Text>
-            <Text style={styles.uploadDate}>• {video.uploadDate}</Text>
+            <Text style={[styles.views, { color: colors.textSecondary }]}>{video.views} views</Text>
+            <Text style={[styles.uploadDate, { color: colors.textSecondary }]}>• {video.uploadDate}</Text>
           </View>
         </View>
         </TouchableOpacity>
@@ -83,14 +85,13 @@ export default function FeaturedVideoCard({ video, index }: FeaturedVideoCardPro
 
 const styles = StyleSheet.create({
   videoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 20,
     marginBottom: 15,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
   },
   thumbnailContainer: {
     position: 'relative',
@@ -98,8 +99,8 @@ const styles = StyleSheet.create({
   thumbnail: {
     width: '100%',
     height: 200,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   durationBadge: {
     position: 'absolute',
@@ -107,7 +108,7 @@ const styles = StyleSheet.create({
     right: 10,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   duration: {
     color: '#fff',
@@ -119,23 +120,27 @@ const styles = StyleSheet.create({
     top: '50%',
     left: '50%',
     transform: [{ translateX: -15 }, { translateY: -15 }],
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 25,
-    width: 50,
-    height: 50,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    borderRadius: 30,
+    width: 60,
+    height: 60,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   videoInfo: {
-    padding: 15,
+    padding: 20,
   },
   videoTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontFamily: 'SpaceGrotesk-SemiBold',
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   videoMeta: {
     flexDirection: 'row',
@@ -144,12 +149,10 @@ const styles = StyleSheet.create({
   views: {
     fontSize: 14,
     fontFamily: 'FiraCode-Regular',
-    color: '#666',
   },
   uploadDate: {
     fontSize: 14,
     fontFamily: 'FiraCode-Regular',
-    color: '#666',
     marginLeft: 5,
   },
 });

@@ -16,27 +16,40 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  withRepeat,
-  withSequence,
+  withSpring,
+  interpolate,
 } from 'react-native-reanimated';
-import { Play, Users, Eye, ThumbsUp, Share } from 'lucide-react-native';
+import { Play, Users, Eye, ThumbsUp, Share, TrendingUp, Calendar, Clock } from 'lucide-react-native';
 import FunkyBackground from '@/components/FunkyBackground';
 import FeaturedVideoCard from '@/components/FeaturedVideoCard';
+import ThemeToggle from '@/components/ThemeToggle';
 import { useYouTubeData } from '@/hooks/useYouTubeData';
 import { youtubeApi } from '@/services/youtubeApi';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
 export default function HomeScreen() {
+  const { colors } = useTheme();
   const [refreshing, setRefreshing] = React.useState(false);
   const { channelStats, videos, loading, error, refetch } = useYouTubeData();
   const fadeAnim = useSharedValue(0);
-  const scaleAnim = useSharedValue(0.9);
+  const scaleAnim = useSharedValue(0.8);
+  const scrollY = useSharedValue(0);
 
   useEffect(() => {
-    fadeAnim.value = withTiming(1, { duration: 1000 });
-    scaleAnim.value = withTiming(1, { duration: 800 });
+    fadeAnim.value = withTiming(1, { duration: 1200 });
+    scaleAnim.value = withSpring(1, { damping: 15, stiffness: 150 });
   }, []);
+
+  const headerAnimatedStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(scrollY.value, [0, 100], [1, 0.8]);
+    const scale = interpolate(scrollY.value, [0, 100], [1, 0.95]);
+    return {
+      opacity,
+      transform: [{ scale }],
+    };
+  });
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -50,7 +63,6 @@ export default function HomeScreen() {
     refetch().finally(() => setRefreshing(false));
   }, [refetch]);
 
-  // Get featured videos (latest 3 videos)
   const featuredVideos = videos.slice(0, 3).map(video => ({
     id: video.id,
     title: video.title,
@@ -60,206 +72,292 @@ export default function HomeScreen() {
     uploadDate: new Date(video.publishedAt).toLocaleDateString(),
   }));
 
+  const quickStats = [
+    {
+      icon: Users,
+      label: 'Subscribers',
+      value: channelStats ? youtubeApi.formatNumber(channelStats.subscriberCount) : '1.5K',
+      change: '+12.5%',
+      color: colors.primary,
+    },
+    {
+      icon: Eye,
+      label: 'Total Views',
+      value: channelStats ? youtubeApi.formatNumber(channelStats.viewCount) : '25K',
+      change: '+18.2%',
+      color: colors.secondary,
+    },
+    {
+      icon: Play,
+      label: 'Videos',
+      value: channelStats ? channelStats.videoCount : '45',
+      change: '+8.1%',
+      color: colors.accent,
+    },
+  ];
+
   if (loading && !channelStats) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <FunkyBackground />
-        <ActivityIndicator size="large" color="#FF0000" />
-        <Text style={styles.loadingText}>Loading your channel data...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <FunkyBackground />
-        <Text style={styles.errorText}>Unable to load channel data</Text>
-        <Text style={styles.errorSubtext}>Using demo data for now</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={refetch}>
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
+        <View style={styles.loadingContent}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.text }]}>
+            Loading your channel data...
+          </Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FunkyBackground />
-      {/* Hero Section */}
-      <LinearGradient
-        colors={['#FF0000', '#CC0000', '#990000']}
-        style={styles.heroSection}>
-        <Animated.View style={[styles.heroContent, animatedStyle]}>
-          {/* Channel Avatar */}
-          <View style={styles.avatarContainer}>
-            <Image
-              source={{ uri: 'https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=300' }}
-              style={styles.avatar}
-            />
-            <View style={styles.verifiedBadge}>
-              <Text style={styles.verifiedText}>✓</Text>
-            </View>
-          </View>
-
-          {/* Channel Info */}
-          <Text style={styles.channelName}>
-            {channelStats?.title || 'UCIMBMaomkNyX5uJjO9VVN1A'}
-          </Text>
-          <Text style={styles.channelHandle}>@YourAwesomeChannel</Text>
-
-          {/* Subscriber Count */}
-          <View style={styles.subscriberContainer}>
-            <Users size={20} color="#fff" />
-            <Text style={styles.subscriberCount}>
-              {channelStats ? youtubeApi.formatNumber(channelStats.subscriberCount) : '1.5K'} Subscribers
-            </Text>
-          </View>
-
-          {/* Channel Stats */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Eye size={16} color="#fff" />
-              <Text style={styles.statText}>
-                {channelStats ? youtubeApi.formatNumber(channelStats.viewCount) : '25K'} Views
-              </Text>
-            </View>
-            <View style={styles.statItem}>
-              <Play size={16} color="#fff" />
-              <Text style={styles.statText}>
-                {channelStats ? channelStats.videoCount : '45'} Videos
-              </Text>
-            </View>
-            <View style={styles.statItem}>
-              <ThumbsUp size={16} color="#fff" />
-              <Text style={styles.statText}>98% Liked</Text>
-            </View>
-          </View>
-        </Animated.View>
-      </LinearGradient>
-
-      {/* Quick Actions */}
-      <View style={styles.quickActions}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Play size={20} color="#FF0000" />
-          <Text style={styles.actionText}>Latest Video</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton}>
-          <Share size={20} color="#FF0000" />
-          <Text style={styles.actionText}>Share Channel</Text>
-        </TouchableOpacity>
+      
+      {/* Header with Theme Toggle */}
+      <View style={[styles.header, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Dashboard</Text>
+        <ThemeToggle />
       </View>
 
-      {/* Featured Videos Section */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Featured Videos</Text>
-        
-        {featuredVideos.map((video, index) => (
-          <FeaturedVideoCard
-            key={video.id}
-            video={video}
-            index={index}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
           />
-        ))}
-      </View>
+        }
+        onScroll={(event) => {
+          scrollY.value = event.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={16}>
+        
+        {/* Hero Section */}
+        <Animated.View style={[headerAnimatedStyle]}>
+          <LinearGradient
+            colors={colors.gradient1}
+            style={styles.heroSection}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}>
+            <Animated.View style={[styles.heroContent, animatedStyle]}>
+              {/* Channel Avatar */}
+              <View style={styles.avatarContainer}>
+                <Image
+                  source={{ 
+                    uri: channelStats?.thumbnails?.high?.url || 
+                         'https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=300' 
+                  }}
+                  style={styles.avatar}
+                />
+                <View style={[styles.verifiedBadge, { backgroundColor: colors.success }]}>
+                  <Text style={styles.verifiedText}>✓</Text>
+                </View>
+              </View>
 
-      {/* Channel Highlights */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>🚀 Channel Highlights</Text>
-        <View style={styles.highlightsGrid}>
-          <View style={styles.highlightCard}>
-            <Text style={styles.highlightNumber}>
-              {channelStats ? youtubeApi.formatNumber(channelStats.viewCount) : '25K'}+
-            </Text>
-            <Text style={styles.highlightLabel}>Total Views</Text>
-          </View>
-          <View style={styles.highlightCard}>
-            <Text style={styles.highlightNumber}>
-              {channelStats ? youtubeApi.formatNumber(channelStats.subscriberCount) : '1.5K'}+
-            </Text>
-            <Text style={styles.highlightLabel}>Subscribers</Text>
-          </View>
-          <View style={styles.highlightCard}>
-            <Text style={styles.highlightNumber}>
-              {channelStats ? channelStats.videoCount : '45'}+
-            </Text>
-            <Text style={styles.highlightLabel}>Videos</Text>
-          </View>
-          <View style={styles.highlightCard}>
-            <Text style={styles.highlightNumber}>2+</Text>
-            <Text style={styles.highlightLabel}>Years Creating</Text>
+              {/* Channel Info */}
+              <Text style={styles.channelName}>
+                {channelStats?.title || 'Your YouTube Channel'}
+              </Text>
+              <Text style={styles.channelHandle}>@YourAwesomeChannel</Text>
+
+              {/* Main Subscriber Count */}
+              <View style={styles.subscriberContainer}>
+                <Users size={24} color="#fff" />
+                <Text style={styles.subscriberCount}>
+                  {channelStats ? youtubeApi.formatNumber(channelStats.subscriberCount) : '1.5K'}
+                </Text>
+                <Text style={styles.subscriberLabel}>Subscribers</Text>
+              </View>
+            </Animated.View>
+          </LinearGradient>
+        </Animated.View>
+
+        {/* Quick Stats Cards */}
+        <View style={styles.statsSection}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Stats</Text>
+          <View style={styles.statsGrid}>
+            {quickStats.map((stat, index) => (
+              <View key={index} style={[styles.statCard, { backgroundColor: colors.card }]}>
+                <View style={[styles.statIcon, { backgroundColor: `${stat.color}20` }]}>
+                  <stat.icon size={24} color={stat.color} />
+                </View>
+                <Text style={[styles.statValue, { color: colors.text }]}>{stat.value}</Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{stat.label}</Text>
+                <View style={styles.statChange}>
+                  <TrendingUp size={12} color={colors.success} />
+                  <Text style={[styles.changeText, { color: colors.success }]}>{stat.change}</Text>
+                </View>
+              </View>
+            ))}
           </View>
         </View>
-      </View>
-    </ScrollView>
+
+        {/* Quick Actions */}
+        <View style={styles.actionsSection}>
+          <View style={styles.actionsGrid}>
+            <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.primary }]}>
+              <Play size={20} color="#fff" />
+              <Text style={styles.actionText}>Latest Video</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.secondary }]}>
+              <Share size={20} color="#fff" />
+              <Text style={styles.actionText}>Share Channel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Featured Videos Section */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Featured Videos</Text>
+            <TouchableOpacity>
+              <Text style={[styles.seeAllText, { color: colors.primary }]}>See All</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {featuredVideos.map((video, index) => (
+            <FeaturedVideoCard
+              key={video.id}
+              video={video}
+              index={index}
+            />
+          ))}
+        </View>
+
+        {/* Channel Highlights */}
+        <View style={styles.sectionContainer}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>🚀 Channel Highlights</Text>
+          <View style={styles.highlightsGrid}>
+            <LinearGradient
+              colors={[colors.primary, colors.secondary]}
+              style={styles.highlightCard}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}>
+              <Text style={styles.highlightNumber}>
+                {channelStats ? youtubeApi.formatNumber(channelStats.viewCount) : '25K'}+
+              </Text>
+              <Text style={styles.highlightLabel}>Total Views</Text>
+            </LinearGradient>
+            
+            <LinearGradient
+              colors={[colors.secondary, colors.accent]}
+              style={styles.highlightCard}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}>
+              <Text style={styles.highlightNumber}>
+                {channelStats ? youtubeApi.formatNumber(channelStats.subscriberCount) : '1.5K'}+
+              </Text>
+              <Text style={styles.highlightLabel}>Subscribers</Text>
+            </LinearGradient>
+            
+            <LinearGradient
+              colors={[colors.accent, colors.success]}
+              style={styles.highlightCard}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}>
+              <Text style={styles.highlightNumber}>
+                {channelStats ? channelStats.videoCount : '45'}+
+              </Text>
+              <Text style={styles.highlightLabel}>Videos</Text>
+            </LinearGradient>
+            
+            <LinearGradient
+              colors={[colors.success, colors.primary]}
+              style={styles.highlightCard}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}>
+              <Text style={styles.highlightNumber}>2+</Text>
+              <Text style={styles.highlightLabel}>Years Creating</Text>
+            </LinearGradient>
+          </View>
+        </View>
+
+        {/* Recent Activity */}
+        <View style={styles.sectionContainer}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Activity</Text>
+          <View style={[styles.activityCard, { backgroundColor: colors.card }]}>
+            <View style={styles.activityItem}>
+              <View style={[styles.activityIcon, { backgroundColor: `${colors.success}20` }]}>
+                <TrendingUp size={16} color={colors.success} />
+              </View>
+              <View style={styles.activityContent}>
+                <Text style={[styles.activityTitle, { color: colors.text }]}>Channel Growth</Text>
+                <Text style={[styles.activityDescription, { color: colors.textSecondary }]}>
+                  +{channelStats ? Math.floor(parseInt(channelStats.subscriberCount) * 0.1) : '150'} new subscribers this month
+                </Text>
+              </View>
+              <Text style={[styles.activityTime, { color: colors.textSecondary }]}>2h ago</Text>
+            </View>
+            
+            <View style={styles.activityItem}>
+              <View style={[styles.activityIcon, { backgroundColor: `${colors.primary}20` }]}>
+                <Play size={16} color={colors.primary} />
+              </View>
+              <View style={styles.activityContent}>
+                <Text style={[styles.activityTitle, { color: colors.text }]}>New Video Published</Text>
+                <Text style={[styles.activityDescription, { color: colors.textSecondary }]}>
+                  Latest video is performing well
+                </Text>
+              </View>
+              <Text style={[styles.activityTime, { color: colors.textSecondary }]}>1d ago</Text>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontFamily: 'Orbitron-Bold',
+    fontWeight: 'bold',
+    letterSpacing: 1,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+  },
+  loadingContent: {
+    alignItems: 'center',
   },
   loadingText: {
     marginTop: 20,
     fontSize: 16,
     fontFamily: 'SpaceGrotesk-Medium',
-    color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    paddingHorizontal: 40,
-  },
-  errorText: {
-    fontSize: 18,
-    fontFamily: 'SpaceGrotesk-SemiBold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  errorSubtext: {
-    fontSize: 14,
-    fontFamily: 'SpaceGrotesk-Regular',
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: '#FF0000',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  retryText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'SpaceGrotesk-SemiBold',
   },
   heroSection: {
-    height: height * 0.4,
+    height: height * 0.35,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+    marginHorizontal: 20,
+    marginTop: 20,
+    borderRadius: 24,
   },
   heroContent: {
     alignItems: 'center',
   },
   avatarContainer: {
     position: 'relative',
-    marginBottom: 15,
+    marginBottom: 20,
   },
   avatar: {
     width: 100,
@@ -272,13 +370,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#1DA1F2',
     borderRadius: 12,
     width: 24,
     height: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: '#fff',
   },
   verifiedText: {
@@ -287,121 +384,214 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   channelName: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: 'bold',
     fontFamily: 'Orbitron-Bold',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 5,
-    letterSpacing: 1,
+    marginBottom: 8,
+    letterSpacing: 1.2,
   },
   channelHandle: {
     fontSize: 16,
     fontFamily: 'FiraCode-Regular',
-    color: '#ffcccc',
-    marginBottom: 15,
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 20,
     letterSpacing: 0.5,
   },
   subscriberContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginBottom: 20,
-  },
-  subscriberCount: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'SpaceGrotesk-SemiBold',
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statText: {
-    color: '#fff',
-    fontSize: 14,
-    fontFamily: 'SpaceGrotesk-Medium',
-    marginLeft: 5,
-    fontWeight: '500',
-  },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 40,
-    paddingVertical: 20,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backdropFilter: 'blur(10px)',
   },
-  actionText: {
+  subscriberCount: {
+    color: '#fff',
+    fontSize: 24,
+    fontFamily: 'Orbitron-Black',
+    fontWeight: 'bold',
     marginLeft: 8,
-    fontSize: 14,
-    fontFamily: 'SpaceGrotesk-SemiBold',
-    fontWeight: '600',
-    color: '#333',
+    marginRight: 8,
+    letterSpacing: 1,
   },
-  sectionContainer: {
+  subscriberLabel: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk-Medium',
+  },
+  statsSection: {
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingVertical: 25,
   },
   sectionTitle: {
     fontSize: 22,
     fontFamily: 'Orbitron-Bold',
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
+    marginBottom: 16,
     letterSpacing: 0.5,
   },
-  videoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginBottom: 15,
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statCard: {
+    flex: 1,
+    padding: 20,
+    borderRadius: 16,
+    marginHorizontal: 4,
+    alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  thumbnailContainer: {
-    position: 'relative',
+  statIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  thumbnail: {
-    width: '100%',
-    height: 200,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+  statValue: {
+    fontSize: 20,
+    fontFamily: 'Orbitron-Black',
+    fontWeight: 'bold',
+    marginBottom: 4,
+    letterSpacing: 0.5,
   },
-  durationBadge: {
-    position: 'absolute',
-    bottom: 10,
-    right: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  duration: {
-    color: '#fff',
+  statLabel: {
     fontSize: 12,
+    fontFamily: 'SpaceGrotesk-Medium',
+    marginBottom: 8,
+  },
+  statChange: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  changeText: {
+    fontSize: 12,
+    fontFamily: 'FiraCode-Medium',
+    marginLeft: 4,
     fontWeight: '600',
+  },
+  actionsSection: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginHorizontal: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  actionText: {
+    marginLeft: 8,
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk-SemiBold',
+    fontWeight: '600',
+    color: '#fff',
+  },
+  sectionContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  seeAllText: {
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk-SemiBold',
+    fontWeight: '600',
+  },
+  highlightsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  highlightCard: {
+    width: (width - 50) / 2,
+    padding: 20,
+    borderRadius: 20,
+    marginBottom: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  highlightNumber: {
+    fontSize: 28,
+    fontFamily: 'Orbitron-Black',
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+    letterSpacing: 1,
+  },
+  highlightLabel: {
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk-SemiBold',
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+  },
+  activityCard: {
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  activityIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk-SemiBold',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  activityDescription: {
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk-Regular',
+    lineHeight: 20,
+  },
+  activityTime: {
+    fontSize: 12,
+    fontFamily: 'FiraCode-Regular',
   },
 });

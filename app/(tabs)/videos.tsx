@@ -11,24 +11,28 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { Search, Filter, Play, Eye, Calendar } from 'lucide-react-native';
+import { Search, Filter, Play, Eye, Calendar, TrendingUp, Grid, List } from 'lucide-react-native';
 import VideoPlayer from '@/components/VideoPlayer';
+import ThemeToggle from '@/components/ThemeToggle';
 import { useYouTubeData } from '@/hooks/useYouTubeData';
 import { youtubeApi } from '@/services/youtubeApi';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 export default function VideosScreen() {
+  const { colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showPlayer, setShowPlayer] = useState(false);
   const [selectedVideoId, setSelectedVideoId] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const { videos, loading, error } = useYouTubeData();
 
   const categories = ['All', 'Tutorials', 'Reviews', 'Live Streams', 'Shorts'];
 
-  // Transform YouTube API data to match component expectations
   const transformedVideos = videos.map(video => ({
     id: video.id,
     title: video.title,
@@ -36,10 +40,10 @@ export default function VideosScreen() {
     views: youtubeApi.formatNumber(video.viewCount),
     duration: video.duration,
     uploadDate: new Date(video.publishedAt).toLocaleDateString(),
-    category: 'All', // You can implement category detection based on title/description
+    category: 'All',
   }));
 
-  const filteredVideos = videos.filter(video => {
+  const filteredVideos = transformedVideos.filter(video => {
     const matchesSearch = video.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || video.category === selectedCategory;
     return matchesSearch && matchesCategory;
@@ -49,69 +53,119 @@ export default function VideosScreen() {
     setSelectedVideoId(videoId);
     setShowPlayer(true);
   };
-  const renderVideoItem = ({ item, index }) => (
-    <TouchableOpacity 
-      style={styles.videoItem}
-      onPress={() => handlePlayVideo(item.id)}>
-      <View style={styles.thumbnailContainer}>
-        <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
-        <BlurView intensity={20} style={styles.durationBadge}>
-          <Text style={styles.duration}>{item.duration}</Text>
-        </BlurView>
-        <View style={styles.playOverlay}>
-          <Play size={24} color="#fff" fill="#fff" />
-        </View>
-      </View>
-      
-      <View style={styles.videoInfo}>
-        <Text style={styles.videoTitle} numberOfLines={2}>
-          {item.title}
-        </Text>
-        <View style={styles.videoMeta}>
-          <View style={styles.metaItem}>
-            <Eye size={14} color="#666" />
-            <Text style={styles.metaText}>{item.views} views</Text>
+
+  const renderVideoItem = ({ item, index }) => {
+    if (viewMode === 'list') {
+      return (
+        <TouchableOpacity 
+          style={[styles.listVideoItem, { backgroundColor: colors.card }]}
+          onPress={() => handlePlayVideo(item.id)}>
+          <Image source={{ uri: item.thumbnail }} style={styles.listThumbnail} />
+          <View style={styles.listVideoInfo}>
+            <Text style={[styles.listVideoTitle, { color: colors.text }]} numberOfLines={2}>
+              {item.title}
+            </Text>
+            <View style={styles.listVideoMeta}>
+              <View style={styles.metaItem}>
+                <Eye size={14} color={colors.textSecondary} />
+                <Text style={[styles.metaText, { color: colors.textSecondary }]}>{item.views} views</Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Calendar size={14} color={colors.textSecondary} />
+                <Text style={[styles.metaText, { color: colors.textSecondary }]}>{item.uploadDate}</Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.metaItem}>
-            <Calendar size={14} color="#666" />
-            <Text style={styles.metaText}>{item.uploadDate}</Text>
+          <View style={styles.listPlayButton}>
+            <Play size={20} color={colors.primary} />
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <TouchableOpacity 
+        style={[styles.videoItem, { backgroundColor: colors.card }]}
+        onPress={() => handlePlayVideo(item.id)}>
+        <View style={styles.thumbnailContainer}>
+          <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
+          <BlurView intensity={20} style={styles.durationBadge}>
+            <Text style={styles.duration}>{item.duration}</Text>
+          </BlurView>
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.8)']}
+            style={styles.playOverlay}>
+            <Play size={24} color="#fff" fill="#fff" />
+          </LinearGradient>
+        </View>
+        
+        <View style={styles.videoInfo}>
+          <Text style={[styles.videoTitle, { color: colors.text }]} numberOfLines={2}>
+            {item.title}
+          </Text>
+          <View style={styles.videoMeta}>
+            <View style={styles.metaItem}>
+              <Eye size={14} color={colors.textSecondary} />
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>{item.views} views</Text>
+            </View>
+            <View style={styles.metaItem}>
+              <Calendar size={14} color={colors.textSecondary} />
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>{item.uploadDate}</Text>
+            </View>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF0000" />
-        <Text style={styles.loadingText}>Loading your videos...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>Loading your videos...</Text>
       </View>
     );
   }
+
   return (
     <>
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>All Videos</Text>
-          <Text style={styles.videoCount}>{filteredVideos.length} videos</Text>
+        <View style={[styles.header, { backgroundColor: colors.surface }]}>
+          <View>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>All Videos</Text>
+            <Text style={[styles.videoCount, { color: colors.textSecondary }]}>
+              {filteredVideos.length} videos
+            </Text>
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity 
+              style={[styles.viewModeButton, { backgroundColor: colors.card }]}
+              onPress={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
+              {viewMode === 'grid' ? (
+                <List size={20} color={colors.primary} />
+              ) : (
+                <Grid size={20} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+            <ThemeToggle />
+          </View>
         </View>
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <View style={styles.searchBar}>
-            <Search size={20} color="#666" />
+          <View style={[styles.searchBar, { backgroundColor: colors.card }]}>
+            <Search size={20} color={colors.textSecondary} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: colors.text }]}
               placeholder="Search videos..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textSecondary}
             />
           </View>
-          <TouchableOpacity style={styles.filterButton}>
-            <Filter size={20} color="#FF0000" />
+          <TouchableOpacity style={[styles.filterButton, { backgroundColor: colors.primary }]}>
+            <Filter size={20} color="#fff" />
           </TouchableOpacity>
         </View>
 
@@ -126,13 +180,18 @@ export default function VideosScreen() {
               key={category}
               style={[
                 styles.categoryChip,
-                selectedCategory === category && styles.selectedCategoryChip,
+                { backgroundColor: colors.card, borderColor: colors.border },
+                selectedCategory === category && { 
+                  backgroundColor: colors.primary,
+                  borderColor: colors.primary 
+                },
               ]}
               onPress={() => setSelectedCategory(category)}>
               <Text
                 style={[
                   styles.categoryChipText,
-                  selectedCategory === category && styles.selectedCategoryChipText,
+                  { color: colors.textSecondary },
+                  selectedCategory === category && { color: '#fff' },
                 ]}>
                 {category}
               </Text>
@@ -145,8 +204,9 @@ export default function VideosScreen() {
           data={filteredVideos}
           renderItem={renderVideoItem}
           keyExtractor={(item) => item.id.toString()}
-          numColumns={2}
-          columnWrapperStyle={styles.row}
+          numColumns={viewMode === 'grid' ? 2 : 1}
+          key={viewMode}
+          columnWrapperStyle={viewMode === 'grid' ? styles.row : null}
           contentContainerStyle={styles.videosList}
           showsVerticalScrollIndicator={false}
         />
@@ -164,37 +224,51 @@ export default function VideosScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-    paddingTop: 50,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
   },
   loadingText: {
     marginTop: 20,
     fontSize: 16,
     fontFamily: 'SpaceGrotesk-Medium',
-    color: '#666',
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
+    paddingTop: 50,
     paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   headerTitle: {
     fontSize: 28,
     fontFamily: 'Orbitron-Bold',
     fontWeight: 'bold',
-    color: '#333',
     letterSpacing: 0.5,
   },
   videoCount: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'FiraCode-Regular',
-    color: '#666',
-    marginTop: 5,
+    marginTop: 4,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  viewModeButton: {
+    padding: 12,
+    borderRadius: 12,
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -206,33 +280,30 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 25,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    marginRight: 10,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginRight: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 10,
+    marginLeft: 12,
     fontSize: 16,
     fontFamily: 'SpaceGrotesk-Regular',
-    color: '#333',
   },
   filterButton: {
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 20,
+    padding: 14,
+    borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
   categoryContainer: {
     marginBottom: 20,
@@ -241,43 +312,74 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   categoryChip: {
-    backgroundColor: '#fff',
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 20,
-    marginRight: 10,
+    marginRight: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  selectedCategoryChip: {
-    backgroundColor: '#FF0000',
-    borderColor: '#FF0000',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   categoryChipText: {
     fontSize: 14,
     fontFamily: 'SpaceGrotesk-SemiBold',
     fontWeight: '600',
-    color: '#666',
-  },
-  selectedCategoryChipText: {
-    color: '#fff',
   },
   videosList: {
     paddingHorizontal: 15,
+    paddingBottom: 20,
   },
   row: {
     justifyContent: 'space-between',
   },
   videoItem: {
     width: (width - 40) / 2,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginBottom: 15,
+    borderRadius: 16,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  listVideoItem: {
+    flexDirection: 'row',
+    borderRadius: 16,
+    marginBottom: 12,
+    padding: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  listThumbnail: {
+    width: 120,
+    height: 68,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  listVideoInfo: {
+    flex: 1,
+  },
+  listVideoTitle: {
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk-SemiBold',
+    fontWeight: '600',
+    marginBottom: 8,
+    lineHeight: 22,
+  },
+  listVideoMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  listPlayButton: {
+    padding: 12,
+    borderRadius: 20,
   },
   thumbnailContainer: {
     position: 'relative',
@@ -285,28 +387,28 @@ const styles = StyleSheet.create({
   thumbnail: {
     width: '100%',
     height: 120,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
   },
   durationBadge: {
     position: 'absolute',
     bottom: 8,
     right: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   duration: {
     color: '#fff',
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
+    fontFamily: 'FiraCode-Medium',
   },
   playOverlay: {
     position: 'absolute',
     top: '50%',
     left: '50%',
-    transform: [{ translateX: -12 }, { translateY: -12 }],
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    transform: [{ translateX: -20 }, { translateY: -20 }],
     borderRadius: 20,
     width: 40,
     height: 40,
@@ -314,15 +416,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   videoInfo: {
-    padding: 12,
+    padding: 16,
   },
   videoTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'SpaceGrotesk-SemiBold',
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-    lineHeight: 18,
+    marginBottom: 10,
+    lineHeight: 20,
   },
   videoMeta: {
     marginBottom: 8,
@@ -330,12 +431,11 @@ const styles = StyleSheet.create({
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   metaText: {
     fontSize: 12,
-    fontFamily: 'FiraCode-Light',
-    color: '#666',
-    marginLeft: 4,
+    fontFamily: 'FiraCode-Regular',
+    marginLeft: 6,
   },
 });
