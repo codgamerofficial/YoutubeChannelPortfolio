@@ -1,7 +1,7 @@
 // YouTube Data API service
 import axios from 'axios';
 
-const YOUTUBE_API_KEY = 'YOUR_YOUTUBE_API_KEY';
+const YOUTUBE_API_KEY = 'AIzaSyAd1-0fm4LkYBw_EjJGhrStZadW-htIIcs';
 const CHANNEL_ID = 'UCIMBMaomkNyX5uJjO9VVN1A';
 
 // Fallback data when API is not configured
