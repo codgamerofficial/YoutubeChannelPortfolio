@@ -13,6 +13,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Play } from 'lucide-react-native';
+import VideoPlayer from './VideoPlayer';
 
 interface FeaturedVideoCardProps {
   video: {
@@ -28,6 +29,7 @@ interface FeaturedVideoCardProps {
 
 export default function FeaturedVideoCard({ video, index }: FeaturedVideoCardProps) {
   const translateY = useSharedValue(50);
+  const [showPlayer, setShowPlayer] = React.useState(false);
 
   useEffect(() => {
     translateY.value = withTiming(0, {
@@ -41,9 +43,13 @@ export default function FeaturedVideoCard({ video, index }: FeaturedVideoCardPro
     };
   });
 
+  const handlePlayVideo = () => {
+    setShowPlayer(true);
+  };
   return (
-    <Animated.View style={[styles.videoCard, animatedStyle]}>
-      <TouchableOpacity>
+    <>
+      <Animated.View style={[styles.videoCard, animatedStyle]}>
+        <TouchableOpacity onPress={handlePlayVideo}>
         <View style={styles.thumbnailContainer}>
           <Image source={{ uri: video.thumbnail }} style={styles.thumbnail} />
           <BlurView intensity={20} style={styles.durationBadge}>
@@ -63,8 +69,15 @@ export default function FeaturedVideoCard({ video, index }: FeaturedVideoCardPro
             <Text style={styles.uploadDate}>• {video.uploadDate}</Text>
           </View>
         </View>
-      </TouchableOpacity>
-    </Animated.View>
+        </TouchableOpacity>
+      </Animated.View>
+      
+      <VideoPlayer
+        videoId={video.id}
+        visible={showPlayer}
+        onClose={() => setShowPlayer(false)}
+      />
+    </>
   );
 }
 

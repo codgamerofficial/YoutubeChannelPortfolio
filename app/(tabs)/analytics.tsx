@@ -5,17 +5,26 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TrendingUp, Users, Eye, ThumbsUp, MessageCircle, Share, Clock } from 'lucide-react-native';
+import { useYouTubeData } from '@/hooks/useYouTubeData';
+import { youtubeApi } from '@/services/youtubeApi';
 
 const { width } = Dimensions.get('window');
 
 export default function AnalyticsScreen() {
+  const { channelStats, videos, loading, error } = useYouTubeData();
+
+  // Calculate total likes from all videos
+  const totalLikes = videos.reduce((sum, video) => sum + parseInt(video.likeCount || '0'), 0);
+  
   const analyticsData = [
     {
       title: 'Total Views',
-      value: '25.2K',
+      value: channelStats ? youtubeApi.formatNumber(channelStats.viewCount) : '25.2K',
       change: '+18.5%',
       icon: Eye,
       color: '#4F46E5',
@@ -23,7 +32,7 @@ export default function AnalyticsScreen() {
     },
     {
       title: 'Subscribers',
-      value: '1.5K',
+      value: channelStats ? youtubeApi.formatNumber(channelStats.subscriberCount) : '1.5K',
       change: '+12.8%',
       icon: Users,
       color: '#059669',
@@ -31,15 +40,15 @@ export default function AnalyticsScreen() {
     },
     {
       title: 'Total Likes',
-      value: '3.2K',
+      value: youtubeApi.formatNumber(totalLikes.toString()),
       change: '+22.1%',
       icon: ThumbsUp,
       color: '#DC2626',
       gradient: ['#DC2626', '#EF4444'],
     },
     {
-      title: 'Watch Time',
-      value: '2.8K hrs',
+      title: 'Total Videos',
+      value: channelStats ? channelStats.videoCount : '45',
       change: '+15.3%',
       icon: Clock,
       color: '#D97706',
@@ -56,26 +65,16 @@ export default function AnalyticsScreen() {
     { month: 'Jun', views: 4.1 },
   ];
 
-  const topVideos = [
-    {
-      title: 'Ultimate Tech Setup Tour',
-      views: '2.3K',
-      engagement: '98%',
-      thumbnail: 'https://images.pexels.com/photos/1181676/pexels-photo-1181676.jpeg?auto=compress&cs=tinysrgb&w=100',
-    },
-    {
-      title: 'Coding Dream Project',
-      views: '1.8K',
-      engagement: '95%',
-      thumbnail: 'https://images.pexels.com/photos/574071/pexels-photo-574071.jpeg?auto=compress&cs=tinysrgb&w=100',
-    },
-    {
-      title: 'Tech Review Game Changer',
-      views: '1.5K',
-      engagement: '92%',
-      thumbnail: 'https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg?auto=compress&cs=tinysrgb&w=100',
-    },
-  ];
+  // Get top 3 videos by view count
+  const topVideos = videos
+    .sort((a, b) => parseInt(b.viewCount) - parseInt(a.viewCount))
+    .slice(0, 3)
+    .map((video, index) => ({
+      title: video.title.length > 25 ? video.title.substring(0, 25) + '...' : video.title,
+      views: youtubeApi.formatNumber(video.viewCount),
+      engagement: '95%', // You can calculate this based on likes/views ratio
+      thumbnail: video.thumbnails.medium?.url || video.thumbnails.default.url,
+    }));
 
   const renderAnalyticsCard = (item, index) => (
     <LinearGradient
@@ -91,6 +90,14 @@ export default function AnalyticsScreen() {
     </LinearGradient>
   );
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF0000" />
+        <Text style={styles.loadingText}>Loading analytics...</Text>
+      </View>
+    );
+  }
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
@@ -130,6 +137,7 @@ export default function AnalyticsScreen() {
         <Text style={styles.sectionTitle}>Top Performing Videos</Text>
         {topVideos.map((video, index) => (
           <View key={index} style={styles.videoAnalyticsCard}>
+            <Image source={{ uri: video.thumbnail }} style={styles.videoThumbnail} />
             <View style={styles.videoInfo}>
               <Text style={styles.videoTitle} numberOfLines={1}>
                 {video.title}
@@ -160,12 +168,12 @@ export default function AnalyticsScreen() {
         <View style={styles.engagementGrid}>
           <View style={styles.engagementCard}>
             <MessageCircle size={20} color="#4F46E5" />
-            <Text style={styles.engagementValue}>45.2K</Text>
+            <Text style={styles.engagementValue}>{youtubeApi.formatNumber(totalLikes.toString())}</Text>
             <Text style={styles.engagementLabel}>Comments</Text>
           </View>
           <View style={styles.engagementCard}>
             <Share size={20} color="#DC2626" />
-            <Text style={styles.engagementValue}>12.8K</Text>
+            <Text style={styles.engagementValue}>{youtubeApi.formatNumber(totalLikes.toString())}</Text>
             <Text style={styles.engagementLabel}>Shares</Text>
           </View>
           <View style={styles.engagementCard}>
@@ -184,6 +192,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
     paddingTop: 50,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  loadingText: {
+    marginTop: 20,
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk-Medium',
+    color: '#666',
   },
   header: {
     paddingHorizontal: 20,
@@ -309,6 +329,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  videoThumbnail: {
+    width: 60,
+    height: 45,
+    borderRadius: 8,
+    marginRight: 12,
   },
   videoInfo: {
     flex: 1,

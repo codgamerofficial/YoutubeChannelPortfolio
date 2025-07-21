@@ -14,7 +14,7 @@ export function useYouTubeData() {
 
       const [statsData, videosData] = await Promise.all([
         youtubeApi.getChannelStats(),
-        youtubeApi.getChannelVideos(20),
+        youtubeApi.getChannelVideos(50), // Fetch more videos
       ]);
 
       if (statsData) {

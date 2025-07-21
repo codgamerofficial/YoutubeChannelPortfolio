@@ -1,7 +1,7 @@
 // YouTube Data API service
 import axios from 'axios';
 
-const YOUTUBE_API_KEY = 'AIzaSyAd1-0fm4LkYBw_EjJGhrStZadW-htIIcs';
+const YOUTUBE_API_KEY = 'YOUR_YOUTUBE_API_KEY';
 const CHANNEL_ID = 'UCIMBMaomkNyX5uJjO9VVN1A';
 
 // Fallback data when API is not configured
@@ -60,6 +60,34 @@ const FALLBACK_VIDEOS: VideoData[] = [
     viewCount: '3400',
     likeCount: '234',
     duration: '15:22',
+  },
+  {
+    id: 'demo4',
+    title: 'Modern Web Development Trends',
+    description: 'Latest trends in web development',
+    thumbnails: {
+      default: { url: 'https://images.pexels.com/photos/1181676/pexels-photo-1181676.jpeg?auto=compress&cs=tinysrgb&w=120&h=90&fit=crop' },
+      medium: { url: 'https://images.pexels.com/photos/1181676/pexels-photo-1181676.jpeg?auto=compress&cs=tinysrgb&w=320&h=180&fit=crop' },
+      high: { url: 'https://images.pexels.com/photos/1181676/pexels-photo-1181676.jpeg?auto=compress&cs=tinysrgb&w=480&h=360&fit=crop' },
+    },
+    publishedAt: '2024-01-20T16:00:00Z',
+    viewCount: '1890',
+    likeCount: '142',
+    duration: '10:15',
+  },
+  {
+    id: 'demo5',
+    title: 'API Integration Best Practices',
+    description: 'How to integrate APIs effectively',
+    thumbnails: {
+      default: { url: 'https://images.pexels.com/photos/574071/pexels-photo-574071.jpeg?auto=compress&cs=tinysrgb&w=120&h=90&fit=crop' },
+      medium: { url: 'https://images.pexels.com/photos/574071/pexels-photo-574071.jpeg?auto=compress&cs=tinysrgb&w=320&h=180&fit=crop' },
+      high: { url: 'https://images.pexels.com/photos/574071/pexels-photo-574071.jpeg?auto=compress&cs=tinysrgb&w=480&h=360&fit=crop' },
+    },
+    publishedAt: '2024-01-12T11:30:00Z',
+    viewCount: '1650',
+    likeCount: '98',
+    duration: '14:20',
   },
 ];
 
