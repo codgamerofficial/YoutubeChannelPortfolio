@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { TrendingUp, Users, Eye, ThumbsUp, MessageCircle, Share, Clock, Calendar, BarChart3 } from 'lucide-react-native';
+import { TrendingUp, Users, Eye, ThumbsUp, MessageCircle, Share, Clock, Calendar, ChartBar as BarChart3 } from 'lucide-react-native';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useYouTubeData } from '@/hooks/useYouTubeData';
 import { youtubeApi } from '@/services/youtubeApi';
