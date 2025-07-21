@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { Search, Filter, Play, Eye, Calendar, TrendingUp, Grid, List } from 'lucide-react-native';
+import { Search, Filter, Play, Eye, Calendar, TrendingUp, Grid2x2 as Grid, List } from 'lucide-react-native';
 import VideoPlayer from '@/components/VideoPlayer';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useYouTubeData } from '@/hooks/useYouTubeData';
