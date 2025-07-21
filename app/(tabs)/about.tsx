@@ -7,11 +7,16 @@ import {
   Image,
   TouchableOpacity,
   Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Globe, Mail, MessageCircle, Instagram, Twitter, Linkedin, MapPin, Calendar, Award, Users, CirclePlay as PlayCircle } from 'lucide-react-native';
+import { useYouTubeData } from '@/hooks/useYouTubeData';
+import { youtubeApi } from '@/services/youtubeApi';
 
 export default function AboutScreen() {
+  const { channelStats, videos, loading, error } = useYouTubeData();
+
   const socialLinks = [
     { icon: Globe, label: 'Website', url: 'https://yourwebsite.com', color: '#4F46E5' },
     { icon: Mail, label: 'Email', url: 'mailto:contact@youremail.com', color: '#DC2626' },
@@ -21,21 +26,35 @@ export default function AboutScreen() {
   ];
 
   const milestones = [
-    { year: '2022', title: 'Channel Started', description: 'Began my journey creating tech content' },
-    { year: '2023', title: '1K Subscribers', description: 'Reached my first major milestone' },
-    { year: '2024', title: '1.5K Subscribers', description: 'Growing community of tech enthusiasts' },
-    { year: '2024', title: '25K Views', description: 'Achieved 25 thousand total views' },
+    { year: '2022', title: 'Channel Started', description: 'Began my journey creating content' },
+    { year: '2023', title: 'First Milestone', description: 'Reached my first subscriber milestone' },
+    { year: '2024', title: `${channelStats ? youtubeApi.formatNumber(channelStats.subscriberCount) : '1.5K'} Subscribers`, description: 'Growing community of enthusiasts' },
+    { year: '2024', title: `${channelStats ? youtubeApi.formatNumber(channelStats.viewCount) : '25K'} Views`, description: 'Total views milestone achieved' },
   ];
 
   const achievements = [
     { icon: Award, title: 'Creator Award', description: 'YouTube Silver Play Button' },
-    { icon: Users, title: 'Community', description: '1.5K+ Subscribers' },
-    { icon: PlayCircle, title: 'Content', description: '45+ Videos Created' },
+    { icon: Users, title: 'Community', description: `${channelStats ? youtubeApi.formatNumber(channelStats.subscriberCount) : '1.5K'}+ Subscribers` },
+    { icon: PlayCircle, title: 'Content', description: `${channelStats ? channelStats.videoCount : '45'}+ Videos Created` },
   ];
 
   const handleSocialLink = (url) => {
     Linking.openURL(url);
   };
+
+  // Get channel thumbnail from API data
+  const channelThumbnail = channelStats?.thumbnails?.high?.url || 
+    channelStats?.thumbnails?.medium?.url || 
+    'https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=300';
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF0000" />
+        <Text style={styles.loadingText}>Loading channel information...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -44,11 +63,11 @@ export default function AboutScreen() {
         colors={['#FF0000', '#CC0000']}
         style={styles.profileHeader}>
         <Image
-          source={{ uri: 'https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=300' }}
+          source={{ uri: channelThumbnail }}
           style={styles.profileImage}
         />
-        <Text style={styles.name}>Your Name</Text>
-        <Text style={styles.title}>Tech Enthusiast & Content Creator</Text>
+        <Text style={styles.name}>{channelStats?.title || 'Your Channel Name'}</Text>
+        <Text style={styles.title}>Content Creator</Text>
         <View style={styles.locationContainer}>
           <MapPin size={16} color="#ffcccc" />
           <Text style={styles.location}>Your Location</Text>
@@ -59,10 +78,11 @@ export default function AboutScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>About</Text>
         <Text style={styles.aboutText}>
-          Welcome to my YouTube channel! I'm passionate about technology and love sharing my discoveries with the community. 
-          Here you'll find tech reviews, coding tutorials, productivity tips, and insights about the latest tech trends.
+          {channelStats?.description || 
+          `Welcome to my YouTube channel! I'm passionate about creating content and love sharing my discoveries with the community. 
+          Here you'll find engaging videos, tutorials, and insights about various topics.`}
           {'\n\n'}
-          I'm constantly exploring new technologies and sharing my journey with fellow tech enthusiasts. 
+          I'm constantly exploring new ideas and sharing my journey with fellow content enthusiasts. 
           For collaborations, tech discussions, or just to say hello, feel free to reach out!
         </Text>
       </View>
@@ -124,15 +144,15 @@ export default function AboutScreen() {
         <Text style={styles.sectionTitle}>Channel Statistics</Text>
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>1.5K+</Text>
+            <Text style={styles.statNumber}>{channelStats ? youtubeApi.formatNumber(channelStats.subscriberCount) : '1.5K'}+</Text>
             <Text style={styles.statLabel}>Subscribers</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>25K+</Text>
+            <Text style={styles.statNumber}>{channelStats ? youtubeApi.formatNumber(channelStats.viewCount) : '25K'}+</Text>
             <Text style={styles.statLabel}>Views</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>45+</Text>
+            <Text style={styles.statNumber}>{channelStats ? channelStats.videoCount : '45'}+</Text>
             <Text style={styles.statLabel}>Videos</Text>
           </View>
           <View style={styles.statCard}>
@@ -165,6 +185,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  loadingText: {
+    marginTop: 20,
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk-Medium',
+    color: '#666',
   },
   profileHeader: {
     alignItems: 'center',
