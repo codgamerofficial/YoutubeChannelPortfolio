@@ -47,12 +47,17 @@ export const signInWithGoogle = async () => {
       `access_type=offline&` +
       `prompt=select_account`;
 
-    const result = await AuthSession.startAsync({
+    const result = await WebBrowser.openAuthSessionAsync(
       authUrl,
-      returnUrl: redirectUrl,
-    });
+      redirectUrl
+    );
 
-    if (result.type === 'success' && result.params.code) {
+    if (result.type === 'success' && result.url) {
+      // Parse the code from the URL
+      const url = new URL(result.url);
+      const code = url.searchParams.get('code');
+      
+      if (code) {
       // Exchange code for tokens
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -62,7 +67,7 @@ export const signInWithGoogle = async () => {
         body: new URLSearchParams({
           client_id: googleAuthConfig.clientId,
           client_secret: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_SECRET || '',
-          code: result.params.code,
+          code: code,
           grant_type: 'authorization_code',
           redirect_uri: redirectUrl,
         }),
@@ -88,6 +93,7 @@ export const signInWithGoogle = async () => {
           tokens,
           channel: channelData.items?.[0] || null,
         };
+      }
       }
     }
     
