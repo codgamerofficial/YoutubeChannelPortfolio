@@ -123,14 +123,31 @@ export class YouTubeApiService {
   private baseUrl = 'https://www.googleapis.com/youtube/v3';
   private customApiKey: string | null = null;
   private customChannelId: string | null = null;
+  private googleAccessToken: string | null = null;
 
   setCustomCredentials(apiKey: string, channelId: string) {
     this.customApiKey = apiKey;
     this.customChannelId = channelId;
   }
 
+  setGoogleAccessToken(accessToken: string) {
+    this.googleAccessToken = accessToken;
+  }
+
   private getApiKey(): string {
+    if (this.googleAccessToken) {
+      return this.googleAccessToken;
+    }
     return this.customApiKey || YOUTUBE_API_KEY;
+  }
+
+  private getAuthHeaders(): Record<string, string> {
+    if (this.googleAccessToken) {
+      return {
+        'Authorization': `Bearer ${this.googleAccessToken}`,
+      };
+    }
+    return {};
   }
 
   private getChannelId(): string {
@@ -138,8 +155,43 @@ export class YouTubeApiService {
   }
 
   private isApiKeyConfigured(): boolean {
+    if (this.googleAccessToken) {
+      return true;
+    }
     const apiKey = this.getApiKey();
     return apiKey !== 'YOUR_YOUTUBE_API_KEY' && apiKey.length > 10;
+  }
+
+  async getMyChannel(): Promise<ChannelStats | null> {
+    if (!this.googleAccessToken) {
+      return this.getChannelStats();
+    }
+
+    try {
+      const response = await axios.get(`${this.baseUrl}/channels`, {
+        params: {
+          part: 'snippet,statistics',
+          mine: true,
+        },
+        headers: this.getAuthHeaders(),
+      });
+
+      if (response.data.items && response.data.items.length > 0) {
+        const channel = response.data.items[0];
+        return {
+          subscriberCount: channel.statistics.subscriberCount,
+          viewCount: channel.statistics.viewCount,
+          videoCount: channel.statistics.videoCount,
+          title: channel.snippet.title,
+          description: channel.snippet.description,
+          thumbnails: channel.snippet.thumbnails,
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching my channel:', error);
+      return this.getChannelStats();
+    }
   }
 
   async getChannelStats(): Promise<ChannelStats | null> {
@@ -151,10 +203,11 @@ export class YouTubeApiService {
     try {
       const response = await axios.get(`${this.baseUrl}/channels`, {
         params: {
-          part: 'snippet,statistics',
-          id: this.getChannelId(),
-          key: this.getApiKey(),
+          part: 'snippet,statistics', 
+          ...(this.googleAccessToken ? { mine: true } : { id: this.getChannelId() }),
+          ...(this.googleAccessToken ? {} : { key: this.getApiKey() }),
         },
+        headers: this.getAuthHeaders(),
       });
 
       if (response.data.items && response.data.items.length > 0) {
@@ -186,9 +239,10 @@ export class YouTubeApiService {
       const channelResponse = await axios.get(`${this.baseUrl}/channels`, {
         params: {
           part: 'contentDetails',
-          id: this.getChannelId(),
-          key: this.getApiKey(),
+          ...(this.googleAccessToken ? { mine: true } : { id: this.getChannelId() }),
+          ...(this.googleAccessToken ? {} : { key: this.getApiKey() }),
         },
+        headers: this.getAuthHeaders(),
       });
 
       if (!channelResponse.data.items || channelResponse.data.items.length === 0) {
@@ -203,8 +257,9 @@ export class YouTubeApiService {
           part: 'snippet',
           playlistId: uploadsPlaylistId,
           maxResults,
-          key: this.getApiKey(),
+          ...(this.googleAccessToken ? {} : { key: this.getApiKey() }),
         },
+        headers: this.getAuthHeaders(),
       });
 
       if (!playlistResponse.data.items) {
@@ -218,8 +273,9 @@ export class YouTubeApiService {
         params: {
           part: 'snippet,statistics,contentDetails',
           id: videoIds,
-          key: this.getApiKey(),
+          ...(this.googleAccessToken ? {} : { key: this.getApiKey() }),
         },
+        headers: this.getAuthHeaders(),
       });
 
       return videosResponse.data.items.map((video: any) => ({

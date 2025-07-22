@@ -13,7 +13,7 @@ export function useYouTubeData() {
       setError(null);
 
       const [statsData, videosData] = await Promise.all([
-        youtubeApi.getChannelStats(),
+        youtubeApi.getMyChannel() || youtubeApi.getChannelStats(),
         youtubeApi.getChannelVideos(50), // Fetch more videos
       ]);
 

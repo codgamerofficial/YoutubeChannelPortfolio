@@ -54,8 +54,12 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    if (user && profile?.youtube_api_key && profile?.youtube_channel_id) {
-      youtubeApi.setCustomCredentials(profile.youtube_api_key, profile.youtube_channel_id);
+    if (user && profile) {
+      if (profile.google_access_token) {
+        youtubeApi.setGoogleAccessToken(profile.google_access_token);
+      } else if (profile.youtube_api_key && profile.youtube_channel_id) {
+        youtubeApi.setCustomCredentials(profile.youtube_api_key, profile.youtube_channel_id);
+      }
       generateAIInsights();
     }
   }, [user, profile, channelStats, videos]);
@@ -93,7 +97,7 @@ export default function HomeScreen() {
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
     refetch().then(() => {
-      if (user && profile?.youtube_api_key) {
+      if (user && (profile?.youtube_api_key || profile?.google_access_token)) {
         generateAIInsights();
       }
     }).finally(() => setRefreshing(false));
@@ -116,7 +120,7 @@ export default function HomeScreen() {
 
   const handleAuthComplete = () => {
     setShowAuth(false);
-    if (!profile?.youtube_api_key) {
+    if (!profile?.youtube_api_key && !profile?.google_access_token) {
       setShowSetup(true);
     }
   };
@@ -194,7 +198,7 @@ export default function HomeScreen() {
               <LogIn size={16} color="#fff" />
               <Text style={styles.authButtonText}>Sign In</Text>
             </TouchableOpacity>
-          ) : !profile?.youtube_api_key ? (
+          ) : !profile?.youtube_api_key && !profile?.google_access_token ? (
             <TouchableOpacity
               style={[styles.setupButton, { backgroundColor: colors.secondary }]}
               onPress={() => setShowSetup(true)}>
@@ -261,7 +265,7 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* AI Insights Section */}
-        {user && profile?.youtube_api_key && (
+        {user && (profile?.youtube_api_key || profile?.google_access_token) && (
           <View style={styles.aiSection}>
             <View style={styles.sectionHeader}>
               <View style={styles.aiSectionTitle}>

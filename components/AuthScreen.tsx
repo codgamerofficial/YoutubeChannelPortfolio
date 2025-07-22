@@ -11,7 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Mail, Lock, User, Youtube } from 'lucide-react-native';
+import { Mail, Lock, User, Youtube, Chrome } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -21,7 +21,7 @@ interface AuthScreenProps {
 
 export default function AuthScreen({ onClose }: AuthScreenProps) {
   const { colors } = useTheme();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, signInWithGoogleOAuth } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,6 +44,18 @@ export default function AuthScreen({ onClose }: AuthScreenProps) {
       onClose();
     } catch (error: any) {
       Alert.alert('Error', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      await signInWithGoogleOAuth();
+      onClose();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to sign in with Google');
     } finally {
       setLoading(false);
     }
@@ -100,6 +112,22 @@ export default function AuthScreen({ onClose }: AuthScreenProps) {
             disabled={loading}>
             <Text style={styles.authButtonText}>
               {loading ? 'Loading...' : (isLogin ? 'Sign In' : 'Sign Up')}
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.divider}>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dividerText, { color: colors.textSecondary }]}>OR</Text>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.googleButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={handleGoogleSignIn}
+            disabled={loading}>
+            <Chrome size={20} color={colors.primary} />
+            <Text style={[styles.googleButtonText, { color: colors.text }]}>
+              Continue with Google & YouTube
             </Text>
           </TouchableOpacity>
 
@@ -193,6 +221,39 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'SpaceGrotesk-SemiBold',
     fontWeight: '600',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 30,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk-Medium',
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+    paddingVertical: 16,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk-SemiBold',
+    fontWeight: '600',
+    marginLeft: 12,
   },
   switchButton: {
     alignItems: 'center',
