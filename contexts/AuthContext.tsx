@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase, UserProfile } from '@/services/supabase';
+import { supabase, UserProfile, signInWithGoogle } from '@/services/supabase';
 import { Session, User } from '@supabase/supabase-js';
+import { youtubeApi } from '@/services/youtubeApi';
 
 interface AuthContextType {
   user: User | null;
@@ -10,6 +11,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  signInWithGoogleOAuth: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
 
@@ -86,6 +88,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   };
 
+  const signInWithGoogleOAuth = async () => {
+    try {
+      const result = await signInWithGoogle();
+      
+      if (result) {
+        // Create or sign in user with Supabase
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: result.user.email,
+          password: result.user.id, // Use Google ID as password
+        });
+
+        if (error && error.message.includes('Invalid login credentials')) {
+          // User doesn't exist, create account
+          const { error: signUpError } = await supabase.auth.signUp({
+            email: result.user.email,
+            password: result.user.id,
+            options: {
+              data: {
+                full_name: result.user.name,
+                avatar_url: result.user.picture,
+              },
+            },
+          });
+          
+          if (signUpError) throw signUpError;
+        } else if (error) {
+          throw error;
+        }
+
+        // Update profile with YouTube channel info
+        if (result.channel) {
+          await updateProfile({
+            youtube_channel_id: result.channel.id,
+            youtube_channel_title: result.channel.snippet.title,
+            youtube_channel_thumbnail: result.channel.snippet.thumbnails.default.url,
+            google_access_token: result.tokens.access_token,
+            google_refresh_token: result.tokens.refresh_token,
+          });
+
+          // Set up YouTube API with the access token
+          youtubeApi.setGoogleAccessToken(result.tokens.access_token);
+        }
+      }
+    } catch (error) {
+      console.error('Google OAuth sign in error:', error);
+      throw error;
+    }
+  };
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
@@ -116,6 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signUp,
       signOut,
+      signInWithGoogleOAuth,
       updateProfile,
     }}>
       {children}
