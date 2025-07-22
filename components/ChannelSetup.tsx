@@ -9,7 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Youtube, Key, Search, CheckCircle } from 'lucide-react-native';
+import { Youtube, Key, Search, CircleCheck as CheckCircle } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { youtubeApi } from '@/services/youtubeApi';
