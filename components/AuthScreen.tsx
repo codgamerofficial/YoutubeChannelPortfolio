@@ -127,7 +127,7 @@ export default function AuthScreen({ onClose }: AuthScreenProps) {
             disabled={loading}>
             <Chrome size={20} color={colors.primary} />
             <Text style={[styles.googleButtonText, { color: colors.text }]}>
-              Continue with Google & YouTube
+              Continue with Google
             </Text>
           </TouchableOpacity>
 

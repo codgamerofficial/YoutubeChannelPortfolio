@@ -90,47 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogleOAuth = async () => {
     try {
-      const result = await signInWithGoogle();
-      
-      if (result) {
-        // Create or sign in user with Supabase
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: result.user.email,
-          password: result.user.id, // Use Google ID as password
-        });
-
-        if (error && error.message.includes('Invalid login credentials')) {
-          // User doesn't exist, create account
-          const { error: signUpError } = await supabase.auth.signUp({
-            email: result.user.email,
-            password: result.user.id,
-            options: {
-              data: {
-                full_name: result.user.name,
-                avatar_url: result.user.picture,
-              },
-            },
-          });
-          
-          if (signUpError) throw signUpError;
-        } else if (error) {
-          throw error;
-        }
-
-        // Update profile with YouTube channel info
-        if (result.channel) {
-          await updateProfile({
-            youtube_channel_id: result.channel.id,
-            youtube_channel_title: result.channel.snippet.title,
-            youtube_channel_thumbnail: result.channel.snippet.thumbnails.default.url,
-            google_access_token: result.tokens.access_token,
-            google_refresh_token: result.tokens.refresh_token,
-          });
-
-          // Set up YouTube API with the access token
-          youtubeApi.setGoogleAccessToken(result.tokens.access_token);
-        }
-      }
+      await signInWithGoogle();
     } catch (error) {
       console.error('Google OAuth sign in error:', error);
       throw error;
