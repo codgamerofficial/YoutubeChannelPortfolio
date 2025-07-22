@@ -21,11 +21,13 @@ import {
 } from '@expo-google-fonts/fira-code';
 import * as SplashScreen from 'expo-splash-screen';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthProvider } from '@/contexts/AuthContext'
+import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  useFrameworkReady();
   const [fontsLoaded, fontError] = useFonts({
     'Orbitron-Regular': Orbitron_400Regular,
     'Orbitron-Bold': Orbitron_700Bold,
