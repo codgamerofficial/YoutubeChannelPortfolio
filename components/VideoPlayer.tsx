@@ -20,19 +20,6 @@ interface VideoPlayerProps {
 }
 
 export default function VideoPlayer({ videoId, visible, onClose }: VideoPlayerProps) {
-  const handlePlayVideo = () => {
-    // Open YouTube video in browser for better compatibility
-    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    WebBrowser.openBrowserAsync(youtubeUrl);
-    onClose();
-  };
-
-  React.useEffect(() => {
-    if (visible && videoId) {
-      handlePlayVideo();
-    }
-  }, [visible, videoId]);
-
   return (
     <Modal
       visible={visible}

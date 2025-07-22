@@ -1,13 +1,8 @@
 import { useEffect } from 'react';
 
-declare global {
-  interface Window {
-    frameworkReady?: () => void;
-  }
-}
-
 export function useFrameworkReady() {
+  // Empty hook - removed web-specific logic that was causing context issues
   useEffect(() => {
-    window.frameworkReady?.();
-  });
+    // No-op for Expo compatibility
+  }, []);
 }
