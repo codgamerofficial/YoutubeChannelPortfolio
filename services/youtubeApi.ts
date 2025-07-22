@@ -1,7 +1,7 @@
 // YouTube Data API service
 import axios from 'axios';
 
-const YOUTUBE_API_KEY = 'AIzaSyAd1-0fm4LkYBw_EjJGhrStZadW-htIIcs';
+const YOUTUBE_API_KEY = 'YOUR_YOUTUBE_API_KEY';
 const CHANNEL_ID = 'UCIMBMaomkNyX5uJjO9VVN1A';
 
 // Fallback data when API is not configured
@@ -121,9 +121,25 @@ export interface VideoData {
 
 export class YouTubeApiService {
   private baseUrl = 'https://www.googleapis.com/youtube/v3';
+  private customApiKey: string | null = null;
+  private customChannelId: string | null = null;
+
+  setCustomCredentials(apiKey: string, channelId: string) {
+    this.customApiKey = apiKey;
+    this.customChannelId = channelId;
+  }
+
+  private getApiKey(): string {
+    return this.customApiKey || YOUTUBE_API_KEY;
+  }
+
+  private getChannelId(): string {
+    return this.customChannelId || CHANNEL_ID;
+  }
 
   private isApiKeyConfigured(): boolean {
-    return YOUTUBE_API_KEY !== 'YOUR_YOUTUBE_API_KEY' && YOUTUBE_API_KEY.length > 10;
+    const apiKey = this.getApiKey();
+    return apiKey !== 'YOUR_YOUTUBE_API_KEY' && apiKey.length > 10;
   }
 
   async getChannelStats(): Promise<ChannelStats | null> {
@@ -136,8 +152,8 @@ export class YouTubeApiService {
       const response = await axios.get(`${this.baseUrl}/channels`, {
         params: {
           part: 'snippet,statistics',
-          id: CHANNEL_ID,
-          key: YOUTUBE_API_KEY,
+          id: this.getChannelId(),
+          key: this.getApiKey(),
         },
       });
 
@@ -170,8 +186,8 @@ export class YouTubeApiService {
       const channelResponse = await axios.get(`${this.baseUrl}/channels`, {
         params: {
           part: 'contentDetails',
-          id: CHANNEL_ID,
-          key: YOUTUBE_API_KEY,
+          id: this.getChannelId(),
+          key: this.getApiKey(),
         },
       });
 
@@ -187,7 +203,7 @@ export class YouTubeApiService {
           part: 'snippet',
           playlistId: uploadsPlaylistId,
           maxResults,
-          key: YOUTUBE_API_KEY,
+          key: this.getApiKey(),
         },
       });
 
@@ -202,7 +218,7 @@ export class YouTubeApiService {
         params: {
           part: 'snippet,statistics,contentDetails',
           id: videoIds,
-          key: YOUTUBE_API_KEY,
+          key: this.getApiKey(),
         },
       });
 
@@ -245,6 +261,32 @@ export class YouTubeApiService {
       return (number / 1000).toFixed(1) + 'K';
     }
     return number.toString();
+  }
+
+  async searchChannelByHandle(handle: string): Promise<string | null> {
+    if (!this.isApiKeyConfigured()) {
+      return null;
+    }
+
+    try {
+      const response = await axios.get(`${this.baseUrl}/search`, {
+        params: {
+          part: 'snippet',
+          q: handle,
+          type: 'channel',
+          maxResults: 1,
+          key: this.getApiKey(),
+        },
+      });
+
+      if (response.data.items && response.data.items.length > 0) {
+        return response.data.items[0].snippet.channelId;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error searching channel:', error);
+      return null;
+    }
   }
 }
 

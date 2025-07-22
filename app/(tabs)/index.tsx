@@ -9,6 +9,8 @@ import {
   Dimensions,
   RefreshControl,
   ActivityIndicator,
+  Modal,
+  Share,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -19,19 +21,28 @@ import Animated, {
   withSpring,
   interpolate,
 } from 'react-native-reanimated';
-import { Play, Users, Eye, ThumbsUp, Share, TrendingUp, Calendar, Clock } from 'lucide-react-native';
+import { Play, Users, Eye, ThumbsUp, Share as ShareIcon, TrendingUp, Calendar, Clock, Settings, LogIn, Brain } from 'lucide-react-native';
 import FunkyBackground from '@/components/FunkyBackground';
 import FeaturedVideoCard from '@/components/FeaturedVideoCard';
 import ThemeToggle from '@/components/ThemeToggle';
+import AuthScreen from '@/components/AuthScreen';
+import ChannelSetup from '@/components/ChannelSetup';
+import AIInsightsCard from '@/components/AIInsightsCard';
 import { useYouTubeData } from '@/hooks/useYouTubeData';
 import { youtubeApi } from '@/services/youtubeApi';
+import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { aiAnalytics, AIInsight } from '@/services/aiAnalytics';
 
 const { width, height } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const { colors } = useTheme();
+  const { user, profile } = useAuth();
   const [refreshing, setRefreshing] = React.useState(false);
+  const [showAuth, setShowAuth] = React.useState(false);
+  const [showSetup, setShowSetup] = React.useState(false);
+  const [aiInsights, setAiInsights] = React.useState<AIInsight[]>([]);
   const { channelStats, videos, loading, error, refetch } = useYouTubeData();
   const fadeAnim = useSharedValue(0);
   const scaleAnim = useSharedValue(0.8);
@@ -42,6 +53,27 @@ export default function HomeScreen() {
     scaleAnim.value = withSpring(1, { damping: 15, stiffness: 150 });
   }, []);
 
+  useEffect(() => {
+    if (user && profile?.youtube_api_key && profile?.youtube_channel_id) {
+      youtubeApi.setCustomCredentials(profile.youtube_api_key, profile.youtube_channel_id);
+      generateAIInsights();
+    }
+  }, [user, profile, channelStats, videos]);
+
+  const generateAIInsights = async () => {
+    if (channelStats && videos.length > 0) {
+      try {
+        const insights = await aiAnalytics.analyzeChannelPerformance(channelStats, videos);
+        setAiInsights(insights);
+        
+        if (user) {
+          await aiAnalytics.saveAnalytics(user.id, channelStats.title, insights);
+        }
+      } catch (error) {
+        console.error('Error generating AI insights:', error);
+      }
+    }
+  };
   const headerAnimatedStyle = useAnimatedStyle(() => {
     const opacity = interpolate(scrollY.value, [0, 100], [1, 0.8]);
     const scale = interpolate(scrollY.value, [0, 100], [1, 0.95]);
@@ -60,9 +92,39 @@ export default function HomeScreen() {
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    refetch().finally(() => setRefreshing(false));
+    refetch().then(() => {
+      if (user && profile?.youtube_api_key) {
+        generateAIInsights();
+      }
+    }).finally(() => setRefreshing(false));
   }, [refetch]);
 
+  const handleShareChannel = async () => {
+    try {
+      const channelUrl = `https://youtube.com/channel/${profile?.youtube_channel_id || 'UCIMBMaomkNyX5uJjO9VVN1A'}`;
+      const message = `Check out my YouTube channel: ${channelStats?.title || 'My Channel'}\n${channelUrl}`;
+      
+      await Share.share({
+        message,
+        url: channelUrl,
+        title: channelStats?.title || 'My YouTube Channel',
+      });
+    } catch (error) {
+      console.error('Error sharing channel:', error);
+    }
+  };
+
+  const handleAuthComplete = () => {
+    setShowAuth(false);
+    if (!profile?.youtube_api_key) {
+      setShowSetup(true);
+    }
+  };
+
+  const handleSetupComplete = () => {
+    setShowSetup(false);
+    refetch();
+  };
   const featuredVideos = videos.slice(0, 3).map(video => ({
     id: video.id,
     title: video.title,
@@ -116,8 +178,32 @@ export default function HomeScreen() {
       
       {/* Header with Theme Toggle */}
       <View style={[styles.header, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Dashboard</Text>
-        <ThemeToggle />
+        <View>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Dashboard</Text>
+          {user && (
+            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+              Welcome back, {user.email?.split('@')[0]}
+            </Text>
+          )}
+        </View>
+        <View style={styles.headerActions}>
+          {!user ? (
+            <TouchableOpacity
+              style={[styles.authButton, { backgroundColor: colors.primary }]}
+              onPress={() => setShowAuth(true)}>
+              <LogIn size={16} color="#fff" />
+              <Text style={styles.authButtonText}>Sign In</Text>
+            </TouchableOpacity>
+          ) : !profile?.youtube_api_key ? (
+            <TouchableOpacity
+              style={[styles.setupButton, { backgroundColor: colors.secondary }]}
+              onPress={() => setShowSetup(true)}>
+              <Settings size={16} color="#fff" />
+              <Text style={styles.setupButtonText}>Setup</Text>
+            </TouchableOpacity>
+          ) : null}
+          <ThemeToggle />
+        </View>
       </View>
 
       <ScrollView
@@ -174,6 +260,21 @@ export default function HomeScreen() {
           </LinearGradient>
         </Animated.View>
 
+        {/* AI Insights Section */}
+        {user && profile?.youtube_api_key && (
+          <View style={styles.aiSection}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.aiSectionTitle}>
+                <Brain size={24} color={colors.primary} />
+                <Text style={[styles.sectionTitle, { color: colors.text, marginLeft: 8 }]}>
+                  AI Insights
+                </Text>
+              </View>
+            </View>
+            <AIInsightsCard insights={aiInsights} />
+          </View>
+        )}
+
         {/* Quick Stats Cards */}
         <View style={styles.statsSection}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Stats</Text>
@@ -202,7 +303,13 @@ export default function HomeScreen() {
               <Text style={styles.actionText}>Latest Video</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.secondary }]}>
-              <Share size={20} color="#fff" />
+              <ShareIcon size={20} color="#fff" />
+              <Text style={styles.actionText}>Share Channel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.actionButton, { backgroundColor: colors.secondary }]}
+              onPress={handleShareChannel}>
+              <ShareIcon size={20} color="#fff" />
               <Text style={styles.actionText}>Share Channel</Text>
             </TouchableOpacity>
           </View>
@@ -306,6 +413,24 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Auth Modal */}
+      <Modal
+        visible={showAuth}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowAuth(false)}>
+        <AuthScreen onClose={handleAuthComplete} />
+      </Modal>
+
+      {/* Setup Modal */}
+      <Modal
+        visible={showSetup}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setShowSetup(false)}>
+        <ChannelSetup onComplete={handleSetupComplete} />
+      </Modal>
     </View>
   );
 }
@@ -329,6 +454,43 @@ const styles = StyleSheet.create({
     fontFamily: 'Orbitron-Bold',
     fontWeight: 'bold',
     letterSpacing: 1,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    fontFamily: 'FiraCode-Regular',
+    marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  authButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  authButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontFamily: 'SpaceGrotesk-SemiBold',
+    marginLeft: 4,
+  },
+  setupButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  setupButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontFamily: 'SpaceGrotesk-SemiBold',
+    marginLeft: 4,
   },
   loadingContainer: {
     flex: 1,
@@ -432,6 +594,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 16,
     letterSpacing: 0.5,
+  },
+  aiSection: {
+    paddingVertical: 20,
+  },
+  aiSectionTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   statsGrid: {
     flexDirection: 'row',
